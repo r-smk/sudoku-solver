@@ -1,0 +1,209 @@
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400&display=swap');
+
+:root {
+    --primary-color: #0c10f0c5;
+}
+
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+body {
+    font-family: 'Poppins', sans-serif;
+    height: 100vh;
+    width: 100vw;
+}
+
+.game-container {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    background-color: lightblue;
+    position: relative;
+}
+
+.create-container {
+    position: absolute;
+    background: transparent;
+    top: 0;
+    left: 0;
+    height: 100%;
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    visibility: hidden;
+}
+
+.create-container.show {
+    visibility: visible;
+}
+
+.create {
+    z-index: 10;
+}
+
+.sudoku-container {
+    position: relative;
+    height: 90%;
+    width: 500px;
+    padding: 0 45px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    background-color: aliceblue;
+    border-radius: 20px;
+}
+
+.title {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 60px;
+    padding-top: 8px;
+    text-align: center;
+    background-color: var(--primary-color);
+    color: #fff;
+    border-top-left-radius: 20px;
+    border-top-right-radius: 20px;
+    font-size: 2rem;
+}
+
+.sudoku {
+    margin-top: 40px;
+    flex-direction: column;
+    border: 3px solid var(--primary-color);
+    display: none;
+}
+
+.sudoku.show {
+    display: flex;
+}
+
+.sudoku .row {
+    display: flex;
+}
+
+.sudoku .cell {
+    height: 45px;
+    width: 45px;
+    font-size: 30px;
+    font-weight: 300;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: rgba(12, 16, 240, 0.25) 1px solid;
+}
+
+.sudoku .cell p {
+    user-select: none;
+    cursor: default;
+    color: rgb(39, 38, 38);
+}
+
+.cell.freeze p {
+    color: #0c10f0;
+}
+
+.cell.error {
+    background-color: #f8cbcb !important;
+}
+
+.cell.highlight {
+    background-color: rgba(12, 16, 240, 0.1);
+}
+
+.cell.select {
+    background-color: rgba(12, 16, 240, 0.23) !important;
+}
+
+/* Styling the sudoku borders */
+.sudoku .row .cell:nth-of-type(3),
+.sudoku .row .cell:nth-of-type(6) {
+    border-right: var(--primary-color) 3px solid;
+}
+
+.sudoku .row:nth-of-type(3),
+.sudoku .row:nth-of-type(6) {
+    border-bottom: var(--primary-color) 3px solid;
+}
+
+.create-mode,
+.solve-mode {
+    margin-top: 15px;
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: space-evenly;
+    display: none;
+}
+
+.btn {
+    cursor: pointer;
+    background-color: var(--primary-color);
+    color: #fff;
+    width: 200px;
+    padding: 12px 16px;
+    border-radius: 5px;
+    border: none;
+    outline: 0;
+    font-size: 20px;
+}
+
+.btn-small {
+    width: 100px;
+    padding: 8px 0;
+}
+
+.solve-mode .numbers-notes-container {
+    width: 100%;
+    display: flex;
+    justify-content: space-evenly;
+}
+
+.numbers-notes-container div {
+    cursor: pointer;
+    width: 30px;
+    height: 35px;
+    border: 2px solid var(--primary-color);
+    border-radius: 5px;
+    text-align: center;
+    line-height: 35px;
+}
+
+.numbers-notes-container .number {
+    font-size: 25px;
+    font-weight: 400;
+    user-select: none;
+}
+
+.numbers-notes-container .notes {
+    font-size: 20px;
+}
+
+.numbers-notes-container .selected {
+    border: 2px solid rgba(12, 16, 240, 0);
+    background-color: var(--primary-color);
+    color: whitesmoke;
+}
+
+.reset-solve-container {
+    margin-top: 10px;
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: space-evenly;
+}
+
+
+.create-mode.show,
+.solve-mode.show {
+    display: flex;
+}
