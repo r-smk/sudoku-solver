@@ -1,13 +1,15 @@
 const sudoku = document.querySelector(".sudoku");
 const createNewSudokuBtn = document.getElementById("create-new");
 const createNewSudokuBtnContainer = document.getElementById("create-container");
-const create = document.getElementById("create");
-const solve = document.getElementById("solve");
 
 const createMode = document.querySelector(".create-mode");
-const solveMode = document.querySelector(".solve-mode");
+const create = document.getElementById("create");
 
+const solveMode = document.querySelector(".solve-mode");
+const solve = document.getElementById("solve");
+const reset = document.getElementById("reset");
 const numbersAndNotesDiv = document.getElementById("numbers-notes-container");
+const notes = document.getElementById("notes");
 
 let currSelectedCell = null;
 let numOfSols = 0;
@@ -22,10 +24,15 @@ const ARROW_DOWN_KEY_CODE = 40;
 const DELETE_KEY_CODE = 46;
 
 // keys
-const SUDOKU_SOLUTIONS_KEY = "solutions";
+const SUDOKU_SOLUTIONS_KEY = "sudoku_solution";
+const RESET_SUDOKU_KEY = "sudoku";
+
+// Notes Mode
+const NOTES_MODE_ON = "on";
+const NOTES_MODE_OFF = "off";
 
 // Creating an empty sudoku
-function createEmptySudoku(sudokuArray) {
+function createSudoku(sudokuArray) {
   sudoku.innerHTML = "";
   for (let row = 0; row < 9; row++) {
     const rowEl = document.createElement("div");
@@ -116,14 +123,14 @@ function deselectNumber(value) {
 }
 
 function selectCell(cell) {
-  const prevValue = currSelectedCell.textContent;
+  const prevValue = getFilledNumber(currSelectedCell);
   if (prevValue != "") {
     deselectNumber(prevValue);
   }
   currSelectedCell.classList.remove("select");
   toggleHighlightingCells(currSelectedCell);
 
-  const value = cell.textContent;
+  const value = getFilledNumber(cell);
   if (value != "") {
     selectNumber(value);
   }
@@ -173,11 +180,12 @@ function validateHighlightedCells(cell) {
   let isInvalid = false;
 
   cellsToBeHighlighted.forEach((highlightedCell) => {
-    if (highlightedCell.textContent == "") {
+    const highlightedCellValue = getFilledNumber(highlightedCell);
+    if (highlightedCellValue == "") {
       return;
     }
 
-    if (highlightedCell.textContent == cell.textContent) {
+    if (highlightedCellValue == getFilledNumber(cell)) {
       highlightedCell.classList.add("error");
 
       isInvalid = true;
@@ -195,17 +203,11 @@ function validateHighlightedCells(cell) {
 
 // Function to handle number keys when pressed
 function numberKeysHandler(key) {
-  selectNumber(key);
-  const prevValue = currSelectedCell.textContent;
-
-  if (prevValue != "") deleteKeyFunction();
-
-  if (prevValue == key) {
-    deselectNumber(key);
-    return;
+  if (isNotesOn() && currSelectedCell.classList.contains("notes-grid")) {
+    toggleGridValue(key);
+  } else {
+    modifyCell(key);
   }
-
-  currSelectedCell.innerHTML = `<p>${key}</p>`;
 
   const isInvalid = validateHighlightedCells(currSelectedCell);
 
@@ -220,7 +222,7 @@ function isValidNumber(key) {
 }
 
 function deleteKeyFunction() {
-  deselectNumber(currSelectedCell.textContent);
+  deselectNumber(getFilledNumber(currSelectedCell));
   eraseNumberInCell(currSelectedCell);
   currSelectedCell.classList.remove("error");
   validateHighlightedCells(currSelectedCell);
@@ -264,7 +266,7 @@ function getSudokuArray() {
       const index = row * 9 + col;
 
       // If it is empty then fill with 0 else the number.
-      rowEls.push(parseInt(cells[index].textContent) || 0);
+      rowEls.push(parseInt(getFilledNumber(cells[index])) || 0);
     }
     sudokuArray.push(rowEls);
   }
@@ -373,7 +375,7 @@ function isValidSudoku(sudoku) {
 
 function initCurrentSelectedCell() {
   currSelectedCell = document.getElementById("00");
-  const value = currSelectedCell.textContent;
+  const value = getFilledNumber(currSelectedCell);
   if (value != "") {
     selectNumber(value);
   }
@@ -383,7 +385,7 @@ function initCurrentSelectedCell() {
 
 function createNewSudokuBtnHandler() {
   createNewSudokuBtnContainer.classList.remove("show");
-  createEmptySudoku();
+  createSudoku();
   sudoku.classList.add("show");
   initCurrentSelectedCell();
   createMode.classList.add("show");
@@ -395,18 +397,27 @@ function createSudokuHandler() {
     return;
   }
 
+  const initialCell = document.getElementById("00");
+  selectCell(initialCell);
+
   createMode.classList.remove("show");
   freezeSudokuFilledCells();
-  initCurrentSelectedCell();
   solveMode.classList.add("show");
+
+  // This can be used to reset the sudoku again
+  sessionStorage.setItem(RESET_SUDOKU_KEY, JSON.stringify(sudokuArray));
 }
 
 function fillSudoku() {
+  // To deselect this number as it may be wrong also
+  const prevValue = getFilledNumber(currSelectedCell);
+
   const answer = JSON.parse(localStorage.getItem(SUDOKU_SOLUTIONS_KEY));
 
   const cells = document.querySelectorAll(".cell");
 
   cells.forEach((cell, index) => {
+    cell.classList.remove("error", "notes-grid");
     if (!cell.classList.contains("freeze")) {
       let row = Math.floor(index / 9);
       let col = index % 9;
@@ -414,6 +425,12 @@ function fillSudoku() {
       cell.innerHTML = `<p>${answer[row][col]}</p>`;
     }
   });
+
+  if(prevValue != '') {
+    deselectNumber(prevValue);
+  }
+  // Select the cell
+  selectCell(currSelectedCell);
 }
 
 function numbersAndNotesDivHandler(event) {
@@ -424,6 +441,7 @@ function numbersAndNotesDivHandler(event) {
   }
 
   if (div.classList.contains("number") && !isFreezedCell(currSelectedCell)) {
+    // Here div is not the cell. It is in numbers-notes-container which always contains number.
     const key = div.textContent;
     numberKeysHandler(key);
   } else {
@@ -432,8 +450,8 @@ function numbersAndNotesDivHandler(event) {
 
 function loadSudoku() {
   const sudokuArr = [
-    [0, 7, 0, 5, 3, 0, 1, 0, 6],
-    [0, 0, 2, 0, 0, 0, 0, 0, 7],
+    [8, 7, 0, 5, 3, 0, 1, 0, 6],
+    [0, 0, 2, 0, 6, 0, 0, 0, 7],
     [0, 0, 0, 0, 8, 0, 0, 0, 0],
     [0, 5, 0, 0, 0, 8, 0, 0, 0],
     [0, 0, 4, 6, 5, 0, 0, 3, 0],
@@ -443,9 +461,98 @@ function loadSudoku() {
     [0, 2, 0, 1, 7, 0, 3, 0, 0],
   ];
   createNewSudokuBtnContainer.classList.remove("show");
-  createEmptySudoku(sudokuArr);
+  createSudoku(sudokuArr);
+  initCurrentSelectedCell();
   sudoku.classList.add("show");
   createSudokuHandler();
+}
+
+// ------------------------- Making notes functions here ----------------------------
+
+// Modifying cell.textContent to a getFilledNumber();
+function getFilledNumber(cell) {
+  if (!cell.classList.contains("notes-grid")) {
+    return cell.textContent;
+  } else {
+    return "";
+  }
+}
+
+function isNotesOn() {
+  return notes.dataset.mode === NOTES_MODE_ON;
+}
+
+function toggleGridValue(value) {
+  const gridValueDiv = currSelectedCell.querySelector(`.value-${value}`);
+  gridValueDiv.classList.toggle("hide");
+}
+
+// Modifies the cell accordint to the notes on/off when the key is pressed
+function modifyCell(key) {
+  if (isNotesOn()) {
+    // Initially if the cell contains a value and it is selected in numbers-notes-container
+    // Then we have to unselect it.
+    const value = getFilledNumber(currSelectedCell);
+    if (value != "") {
+      deselectNumber(value);
+    }
+
+    currSelectedCell.classList.add("notes-grid");
+    currSelectedCell.innerHTML = "";
+
+    for (let i = 1; i <= 9; i++) {
+      currSelectedCell.innerHTML += `<div class="value hide value-${i}">${i}</div>`;
+    }
+    toggleGridValue(key);
+  } else {
+    selectNumber(key);
+    const prevValue = getFilledNumber(currSelectedCell);
+
+    if (prevValue != "") {
+      deleteKeyFunction();
+    }
+
+    if (prevValue == key) {
+      deselectNumber(key);
+      return;
+    }
+
+    currSelectedCell.classList.remove("notes-grid");
+    currSelectedCell.innerHTML = `<p>${key}</p>`;
+  }
+}
+
+function toggleNotesMode() {
+  if (notes.dataset.mode === NOTES_MODE_OFF) {
+    notes.classList.add("selected");
+    notes.dataset.mode = NOTES_MODE_ON;
+  } else {
+    notes.classList.remove("selected");
+    notes.dataset.mode = NOTES_MODE_OFF;
+  }
+}
+
+// ------------------------- Making notes functions end here ---------------------------
+
+function resetSudoku() {
+  const cells = document.querySelectorAll(".cell");
+
+  cells.forEach((cell) => {
+    cell.classList.remove("error");
+    if (!cell.classList.contains("freeze")) {
+      cell.classList.remove("notes-grid");
+      cell.innerHTML = ``;
+    }
+  });
+
+  const divs = numbersAndNotesDiv.querySelectorAll("div");
+  divs.forEach((div) => div.classList.remove("selected"));
+
+  // Set the notes mode off
+  notes.dataset.mode = NOTES_MODE_OFF;
+
+  // Select if the currSelectedCell is having a freezed number or not
+  selectCell(currSelectedCell);
 }
 
 sudoku.addEventListener("click", sudokuClickHandler);
@@ -453,7 +560,9 @@ createNewSudokuBtn.addEventListener("click", createNewSudokuBtnHandler);
 create.addEventListener("click", createSudokuHandler);
 solve.addEventListener("click", fillSudoku);
 numbersAndNotesDiv.addEventListener("click", numbersAndNotesDivHandler);
+notes.addEventListener("click", toggleNotesMode);
+reset.addEventListener("click", resetSudoku);
 
 window.addEventListener("keydown", keyHandler);
 
-loadSudoku();
+// loadSudoku(); // For testing
