@@ -4,6 +4,7 @@ const createNewSudokuBtnContainer = document.getElementById("create-container");
 
 const createMode = document.querySelector(".create-mode");
 const create = document.getElementById("create");
+const randomSudokuBtn = document.getElementById("random-sudoku");
 
 const solveMode = document.querySelector(".solve-mode");
 const solve = document.getElementById("solve");
@@ -122,6 +123,9 @@ function deselectNumber(value) {
   number.classList.remove("selected");
 }
 
+// This function selects the cell
+// and highlights all the cells which are related to the selected cell in sudoku constraints
+// It also selects or deselects the number according to the cell
 function selectCell(cell) {
   const prevValue = getFilledNumber(currSelectedCell);
   if (prevValue != "") {
@@ -175,7 +179,17 @@ function arrowKeysHandler(keyCode) {
   }
 }
 
-function validateHighlightedCells(cell) {
+function validateHighlightedCells(cell, visitedCells) {
+  const index =
+    parseInt(cell.getAttribute("id")[0]) * 9 +
+    parseInt(cell.getAttribute("id")[1]);
+  if (visitedCells[index]) {
+    // If it is already visited, that means it is already calculated.
+    // So, if it contains error then we should return "true" so isInvalid = true and we won't remove 'error'(if(!isInvalid) condition)
+    return cell.classList.contains("error");
+  }
+
+  visitedCells[index] = true;
   const cellsToBeHighlighted = getAllHighlightingCells(cell);
   let isInvalid = false;
 
@@ -190,7 +204,7 @@ function validateHighlightedCells(cell) {
 
       isInvalid = true;
     } else if (highlightedCell.classList.contains("error")) {
-      const isInvalid = validateHighlightedCells(highlightedCell);
+      const isInvalid = validateHighlightedCells(highlightedCell, visitedCells);
 
       if (!isInvalid) {
         highlightedCell.classList.remove("error");
@@ -201,6 +215,15 @@ function validateHighlightedCells(cell) {
   return isInvalid;
 }
 
+// Visited array which is initialised with false for 81 elements array
+// Where each element indicates the cell in sudoku whether it is already visited or not
+function getVisitedArray() {
+  const visited = new Array(81);
+  for (let i = 0; i < 81; i++) visited[i] = false;
+
+  return visited;
+}
+
 // Function to handle number keys when pressed
 function numberKeysHandler(key) {
   if (isNotesOn() && currSelectedCell.classList.contains("notes-grid")) {
@@ -209,7 +232,8 @@ function numberKeysHandler(key) {
     modifyCell(key);
   }
 
-  const isInvalid = validateHighlightedCells(currSelectedCell);
+  const visited = getVisitedArray();
+  const isInvalid = validateHighlightedCells(currSelectedCell, visited);
 
   if (isInvalid) {
     currSelectedCell.classList.add("error");
@@ -225,7 +249,10 @@ function deleteKeyFunction() {
   deselectNumber(getFilledNumber(currSelectedCell));
   eraseNumberInCell(currSelectedCell);
   currSelectedCell.classList.remove("error");
-  validateHighlightedCells(currSelectedCell);
+
+  // Initialize that all sudoku cells are not visited
+  const visited = getVisitedArray();
+  validateHighlightedCells(currSelectedCell, visited);
 }
 
 // Handles when user presses a key
@@ -313,13 +340,19 @@ function checkBox(sudoku, row, col, value) {
   return false;
 }
 
-function solveSudoku(sudoku, index) {
+// Adding oneSol => oneSolution parameter so that it can be used for checking whether it have more solutions or not also
+function solveSudoku(
+  sudoku,
+  index,
+  oneSol = false,
+  values = [1, 2, 3, 4, 5, 6, 7, 8, 9]
+) {
   // if we reached the end then it is valid answer
   if (index == 81) {
     numOfSols++;
     if (numOfSols == 1) {
       localStorage.setItem(SUDOKU_SOLUTIONS_KEY, JSON.stringify(sudoku));
-      return false;
+      return oneSol;
     } else {
       return true;
     }
@@ -333,7 +366,7 @@ function solveSudoku(sudoku, index) {
     return solveSudoku(sudoku, index + 1);
   }
 
-  for (let value = 1; value <= 9; value++) {
+  for (const value of values) {
     // If the value already exists in either row or col or box
     // then continue for next value;
     if (
@@ -391,18 +424,25 @@ function createNewSudokuBtnHandler() {
   createMode.classList.add("show");
 }
 
-function createSudokuHandler() {
-  const sudokuArray = getSudokuArray();
-  if (!isValidSudoku(sudokuArray)) {
-    return;
-  }
-
+// This freezes the cell values in sudoku
+// Selects the initial cell in the sudoku
+// Removes create mode and show the solve mode.
+function freezeCellsAndEnableSolveMode() {
   const initialCell = document.getElementById("00");
   selectCell(initialCell);
 
   createMode.classList.remove("show");
   freezeSudokuFilledCells();
   solveMode.classList.add("show");
+}
+
+function createSudokuHandler() {
+  const sudokuArray = getSudokuArray();
+  if (!isValidSudoku(sudokuArray)) {
+    return;
+  }
+
+  freezeCellsAndEnableSolveMode();
 
   // This can be used to reset the sudoku again
   sessionStorage.setItem(RESET_SUDOKU_KEY, JSON.stringify(sudokuArray));
@@ -426,7 +466,7 @@ function fillSudoku() {
     }
   });
 
-  if(prevValue != '') {
+  if (prevValue != "") {
     deselectNumber(prevValue);
   }
   // Select the cell
@@ -448,23 +488,12 @@ function numbersAndNotesDivHandler(event) {
   }
 }
 
-function loadSudoku() {
-  const sudokuArr = [
-    [8, 7, 0, 5, 3, 0, 1, 0, 6],
-    [0, 0, 2, 0, 6, 0, 0, 0, 7],
-    [0, 0, 0, 0, 8, 0, 0, 0, 0],
-    [0, 5, 0, 0, 0, 8, 0, 0, 0],
-    [0, 0, 4, 6, 5, 0, 0, 3, 0],
-    [0, 0, 0, 0, 0, 2, 6, 0, 0],
-    [0, 0, 0, 0, 0, 6, 8, 0, 0],
-    [9, 0, 0, 0, 0, 0, 0, 4, 0],
-    [0, 2, 0, 1, 7, 0, 3, 0, 0],
-  ];
+function loadSudoku(sudokuArr) {
   createNewSudokuBtnContainer.classList.remove("show");
   createSudoku(sudokuArr);
   initCurrentSelectedCell();
   sudoku.classList.add("show");
-  createSudokuHandler();
+  freezeCellsAndEnableSolveMode();
 }
 
 // ------------------------- Making notes functions here ----------------------------
@@ -555,14 +584,23 @@ function resetSudoku() {
   selectCell(currSelectedCell);
 }
 
+function randomSudokuHandler() {
+  const level = randomNumber(1, 10);
+
+  const [answer, question] = generateRandomSudoku(level);
+  sessionStorage.setItem(SUDOKU_SOLUTIONS_KEY, JSON.stringify(answer));
+  sessionStorage.setItem(RESET_SUDOKU_KEY, JSON.stringify(question));
+
+  loadSudoku(question);
+}
+
 sudoku.addEventListener("click", sudokuClickHandler);
 createNewSudokuBtn.addEventListener("click", createNewSudokuBtnHandler);
 create.addEventListener("click", createSudokuHandler);
+randomSudokuBtn.addEventListener("click", randomSudokuHandler);
 solve.addEventListener("click", fillSudoku);
 numbersAndNotesDiv.addEventListener("click", numbersAndNotesDivHandler);
 notes.addEventListener("click", toggleNotesMode);
 reset.addEventListener("click", resetSudoku);
 
 window.addEventListener("keydown", keyHandler);
-
-// loadSudoku(); // For testing
