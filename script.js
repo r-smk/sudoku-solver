@@ -484,7 +484,6 @@ function numbersAndNotesDivHandler(event) {
     // Here div is not the cell. It is in numbers-notes-container which always contains number.
     const key = div.textContent;
     numberKeysHandler(key);
-  } else {
   }
 }
 
@@ -519,6 +518,9 @@ function toggleGridValue(value) {
 // Modifies the cell accordint to the notes on/off when the key is pressed
 function modifyCell(key) {
   if (isNotesOn()) {
+    // If the cell previously contains the error class then remove it.
+    currSelectedCell.classList.remove("error");
+
     // Initially if the cell contains a value and it is selected in numbers-notes-container
     // Then we have to unselect it.
     const value = getFilledNumber(currSelectedCell);
